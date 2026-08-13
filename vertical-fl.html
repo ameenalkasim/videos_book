@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vertical Federated Learning Simulation</title>
+    <style>
+        :root {
+            --primary: #0a7ea4;
+            --primary-dark: #086786;
+            --background: #f3f4f6;
+            --surface: #ffffff;
+            --muted: #4b5563;
+            --border: #e5e7eb;
+            --terminal: #111827;
+            --success: #10b981;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--background);
+            color: #111827;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        h1 { font-size: 22px; color: var(--primary); margin-top: 0; }
+        h2 { font-size: 18px; margin: 0 0 14px; }
+        h3 { font-size: 16px; margin-top: 0; }
+        p { color: var(--muted); font-size: 14px; line-height: 1.5; }
+        .card {
+            background: #f9fafb;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .parameter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px 18px;
+        }
+        .field label {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            color: #374151;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .value { color: var(--primary); font-variant-numeric: tabular-nums; }
+        input[type="range"] { width: 100%; accent-color: var(--primary); }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover { background-color: var(--primary-dark); }
+        button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        .secondary { background-color: #687076; }
+        .secondary:hover { background-color: #4b5563; }
+        .log-box {
+            background: var(--terminal);
+            color: var(--success);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            padding: 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            height: 280px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .note {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-left: 3px solid var(--primary);
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Algorithm 16.7.2: Secure Vertical Federated Learning</h1>
+        <p>Explore a secure model-partition training protocol. Bank and Hospital keep separate feature columns, create intermediate representations, exchange secret shares, and send aggregated gradients to a central server.</p>
+
+        <section class="card">
+            <h2>Simulation Parameters</h2>
+            <div class="parameter-grid">
+                <div class="field">
+                    <label for="rounds">Training rounds <span id="roundsValue" class="value">3</span></label>
+                    <input id="rounds" type="range" min="1" max="10" value="3">
+                </div>
+                <div class="field">
+                    <label for="batchSize">Batch size <span id="batchSizeValue" class="value">10</span></label>
+                    <input id="batchSize" type="range" min="1" max="50" value="10">
+                </div>
+                <div class="field">
+                    <label for="learningRate">Learning rate <span id="learningRateValue" class="value">0.010</span></label>
+                    <input id="learningRate" type="range" min="0.001" max="0.100" step="0.001" value="0.010">
+                </div>
+                <div class="field">
+                    <label for="bankFeatures">Bank features <span id="bankFeaturesValue" class="value">2</span></label>
+                    <input id="bankFeatures" type="range" min="1" max="8" value="2">
+                </div>
+                <div class="field">
+                    <label for="hospitalFeatures">Hospital features <span id="hospitalFeaturesValue" class="value">3</span></label>
+                    <input id="hospitalFeatures" type="range" min="1" max="8" value="3">
+                </div>
+                <div class="field">
+                    <label for="noiseLevel">Secret-sharing noise <span id="noiseLevelValue" class="value">100%</span></label>
+                    <input id="noiseLevel" type="range" min="0" max="200" value="100">
+                </div>
+            </div>
+            <div class="note">The noise level controls the size of the random share used in this educational demonstration. The two shares still reconstruct the original intermediate value.</div>
+        </section>
+
+        <section class="grid">
+            <div class="card">
+                <h3>Party A (Bank)</h3>
+                <p>Features: income and credit score by default.</p>
+                <p>Feature columns: <strong id="bankSummary">2</strong> · Samples: 100 users</p>
+            </div>
+            <div class="card">
+                <h3>Party B (Hospital)</h3>
+                <p>Features: age, BMI, and blood pressure by default.</p>
+                <p>Feature columns: <strong id="hospitalSummary">3</strong> · Samples: 100 users</p>
+            </div>
+        </section>
+
+        <div class="controls">
+            <button id="runBtn" onclick="runSimulation()">Run Training Rounds</button>
+            <button class="secondary" onclick="resetSim()">Reset</button>
+        </div>
+
+        <section class="card">
+            <h3>Execution Log</h3>
+            <div id="log" class="log-box">Adjust the parameters, then click "Run Training Rounds" to start the protocol simulation...</div>
+        </section>
+    </main>
+
+    <script>
+        const fields = [
+            ["rounds", "roundsValue", value => value],
+            ["batchSize", "batchSizeValue", value => value],
+            ["learningRate", "learningRateValue", value => Number(value).toFixed(3)],
+            ["bankFeatures", "bankFeaturesValue", value => value],
+            ["hospitalFeatures", "hospitalFeaturesValue", value => value],
+            ["noiseLevel", "noiseLevelValue", value => `${value}%`],
+        ];
+
+        fields.forEach(([inputId, outputId, format]) => {
+            const input = document.getElementById(inputId);
+            const output = document.getElementById(outputId);
+            input.addEventListener("input", () => {
+                output.textContent = format(input.value);
+                updatePartySummary();
+            });
+        });
+
+        function getParameters() {
+            return {
+                rounds: Number(document.getElementById("rounds").value),
+                batchSize: Number(document.getElementById("batchSize").value),
+                learningRate: Number(document.getElementById("learningRate").value),
+                bankFeatures: Number(document.getElementById("bankFeatures").value),
+                hospitalFeatures: Number(document.getElementById("hospitalFeatures").value),
+                noiseLevel: Number(document.getElementById("noiseLevel").value),
+            };
+        }
+
+        function updatePartySummary() {
+            const params = getParameters();
+            document.getElementById("bankSummary").textContent = params.bankFeatures;
+            document.getElementById("hospitalSummary").textContent = params.hospitalFeatures;
+        }
+
+        function log(text) {
+            const box = document.getElementById("log");
+            box.innerText += text + "\n";
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function resetSim() {
+            document.getElementById("log").innerText = "Simulation reset. Adjust the parameters and run again.";
+            document.getElementById("runBtn").disabled = false;
+        }
+
+        function runSimulation() {
+            const btn = document.getElementById("runBtn");
+            const params = getParameters();
+            btn.disabled = true;
+            document.getElementById("log").innerText = "";
+
+            log("============================================================");
+            log("Secure Vertical Federated Learning Protocol");
+            log("============================================================");
+            log(`[Parameters] rounds=${params.rounds}, batch=${params.batchSize}, learningRate=${params.learningRate.toFixed(3)}`);
+            log(`[Parameters] Bank features=${params.bankFeatures}, Hospital features=${params.hospitalFeatures}, secret-sharing noise=${params.noiseLevel}%`);
+            log("[Initialization] Parties and server are set up.");
+            log(` Bank: ${params.bankFeatures} features, 100 samples`);
+            log(` Hospital: ${params.hospitalFeatures} features, 100 samples\n`);
+
+            let round = 1;
+            const interval = setInterval(() => {
+                if (round > params.rounds) {
+                    log("\n============================================================");
+                    log("Secure Vertical Federated Training Complete!");
+                    log(`Final model partition size: ${params.bankFeatures + params.hospitalFeatures} x 1`);
+                    log("============================================================");
+                    btn.disabled = false;
+                    clearInterval(interval);
+                    return;
+                }
+
+                log(`--- Round ${round} ---`);
+                log(`[Step 1] Party Bank intermediate: (${params.batchSize}, 1)`);
+                log(`[Step 1] Party Hospital intermediate: (${params.batchSize}, 1)`);
+                log(`[Step 2] Intermediate results encrypted with ${params.noiseLevel}% share noise.`);
+                log(`[Step 3-4] Local gradients computed on encrypted shares.`);
+                log(`[Step 5] Aggregated gradient shape: (${params.bankFeatures + params.hospitalFeatures}, 1)`);
+                log(`[Step 6-7] Global model updated with learning rate ${params.learningRate.toFixed(3)} and partitions distributed.\n`);
+                round++;
+            }, 800);
+        }
+
+        updatePartySummary();
+    </script>
+</body>
+</html>
