@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محاكاة التحسين الكمي من الرتبة الصفرية (QZO)</title>
+    <title>Quantized Zeroth-Order Optimization (QZO) Simulation</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -11,7 +11,7 @@
             color: #1d1d1f;
             margin: 0;
             padding: 20px;
-            direction: rtl;
+            direction: ltr;
         }
         .container {
             max-width: 800px;
@@ -76,7 +76,7 @@
         }
         .btn-primary {
             background-color: #0a7ea4;
-            color: #white;
+            color: #ffffff;
         }
         .btn-secondary {
             background-color: #e5e7eb;
@@ -120,49 +120,49 @@
 </head>
 <body>
     <div class="container">
-        <h1>محاكاة التحسين الكمي من الرتبة الصفرية (QZO)</h1>
-        <p class="subtitle">تطبيق موزع لإرسال قيم كمية (Quantized) لخوارزمية التحسين دون الحاجة لخادم معقد.</p>
+        <h1>Quantized Zeroth-Order Optimization (QZO) Simulation</h1>
+        <p class="subtitle">A distributed procedure that sends quantized values for optimization without a complex server.</p>
 
         <div class="controls">
             <div class="control-group">
-                <label>عدد الأجهزة (Devices):</label>
+                <label>Number of devices:</label>
                 <input type="number" id="nDevices" value="5" min="1" max="20">
             </div>
             <div class="control-group">
-                <label>بتات الكم الكمي (Bits):</label>
+                <label>Quantization bits:</label>
                 <input type="number" id="quantBits" value="4" min="1" max="8">
             </div>
             <div class="control-group">
-                <label>معدل التعلم (Learning Rate):</label>
+                <label>Learning rate:</label>
                 <input type="number" id="lr" value="0.1" step="0.01">
             </div>
             <div class="control-group">
-                <label>مقياس التذبذب (Sigma):</label>
+                <label>Perturbation scale (sigma):</label>
                 <input type="number" id="sigma" value="0.5" step="0.1">
             </div>
         </div>
 
         <div class="buttons">
-            <button class="btn-primary" onclick="startSimulation()">تشغيل المحاكاة</button>
-            <button class="btn-secondary" onclick="resetSimulation()">إعادة تعيين</button>
+            <button class="btn-primary" onclick="startSimulation()">Run simulation</button>
+            <button class="btn-secondary" onclick="resetSimulation()">Reset</button>
         </div>
 
         <div class="stats">
             <div class="stat-card">
-                <div class="label">الجولة الحالية</div>
+                <div class="label">Current round</div>
                 <div class="value" id="roundVal">0</div>
             </div>
             <div class="stat-card">
-                <div class="label">قيمة الهدف (Objective)</div>
+                <div class="label">Objective value</div>
                 <div class="value" id="objVal">5.0000</div>
             </div>
             <div class="stat-card">
-                <div class="label">الحل الحالي (Theta)</div>
+                <div class="label">Current solution (theta)</div>
                 <div class="value" id="thetaVal">[0.00, 0.00]</div>
             </div>
         </div>
 
-        <div class="log-box" id="logBox">جاهز للبدء... اضغط على "تشغيل المحاكاة" لبدء التحسين.</div>
+        <div class="log-box" id="logBox">Ready. Click “Run simulation” to start the optimization.</div>
     </div>
 
     <script>
@@ -189,7 +189,7 @@
         function runStep(nDevices, bits, lr, sigma) {
             if (currentRound >= 50) {
                 clearInterval(timer);
-                log("انتهت الجولات بنجاح.");
+                log("All rounds completed.");
                 return;
             }
 
@@ -236,7 +236,7 @@
             document.getElementById("thetaVal").innerText = `[${theta[0].toFixed(2)}, ${theta[1].toFixed(2)}]`;
 
             if (currentRound % 10 === 0 || currentRound === 1) {
-                log(`الجولة ${currentRound}: قيمة الهدف = ${currentObj.toFixed(4)}, الحل = [${theta[0].toFixed(3)}, ${theta[1].toFixed(3)}]`);
+                log(`Round ${currentRound}: objective = ${currentObj.toFixed(4)}, solution = [${theta[0].toFixed(3)}, ${theta[1].toFixed(3)}]`);
             }
         }
 
@@ -249,7 +249,7 @@
 
             theta = [0.0, 0.0];
             currentRound = 0;
-            document.getElementById("logBox").innerText = "بدء جولات التحسين الموزع...\n";
+            document.getElementById("logBox").innerText = "Starting distributed optimization rounds...\n";
 
             timer = setInterval(() => {
                 runStep(nDevices, bits, lr, sigma);
@@ -263,7 +263,7 @@
             document.getElementById("roundVal").innerText = "0";
             document.getElementById("objVal").innerText = objective(theta).toFixed(4);
             document.getElementById("thetaVal").innerText = "[0.00, 0.00]";
-            document.getElementById("logBox").innerText = "تمت إعادة التعيين.";
+            document.getElementById("logBox").innerText = "Simulation reset.";
         }
 
         function log(msg) {
