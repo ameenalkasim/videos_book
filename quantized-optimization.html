@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محاكاة التحسين الكمي من الرتبة الصفرية (QZO)</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        h1 {
+            font-size: 1.5rem;
+            color: #0a7ea4;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        p.subtitle {
+            text-align: center;
+            color: #687076;
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+            background: #f9f9fb;
+            padding: 16px;
+            border-radius: 12px;
+        }
+        .control-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #333;
+        }
+        .control-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d1d6;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        .buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:active {
+            opacity: 0.8;
+        }
+        .btn-primary {
+            background-color: #0a7ea4;
+            color: #white;
+        }
+        .btn-secondary {
+            background-color: #e5e7eb;
+            color: #11181c;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: #f0f8ff;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid #d0e7f9;
+        }
+        .stat-card .label {
+            font-size: 0.75rem;
+            color: #687076;
+            margin-bottom: 4px;
+        }
+        .stat-card .value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #0a7ea4;
+        }
+        .log-box {
+            background: #1e2022;
+            color: #ecedee;
+            padding: 16px;
+            border-radius: 12px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>محاكاة التحسين الكمي من الرتبة الصفرية (QZO)</h1>
+        <p class="subtitle">تطبيق موزع لإرسال قيم كمية (Quantized) لخوارزمية التحسين دون الحاجة لخادم معقد.</p>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>عدد الأجهزة (Devices):</label>
+                <input type="number" id="nDevices" value="5" min="1" max="20">
+            </div>
+            <div class="control-group">
+                <label>بتات الكم الكمي (Bits):</label>
+                <input type="number" id="quantBits" value="4" min="1" max="8">
+            </div>
+            <div class="control-group">
+                <label>معدل التعلم (Learning Rate):</label>
+                <input type="number" id="lr" value="0.1" step="0.01">
+            </div>
+            <div class="control-group">
+                <label>مقياس التذبذب (Sigma):</label>
+                <input type="number" id="sigma" value="0.5" step="0.1">
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn-primary" onclick="startSimulation()">تشغيل المحاكاة</button>
+            <button class="btn-secondary" onclick="resetSimulation()">إعادة تعيين</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="label">الجولة الحالية</div>
+                <div class="value" id="roundVal">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">قيمة الهدف (Objective)</div>
+                <div class="value" id="objVal">5.0000</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">الحل الحالي (Theta)</div>
+                <div class="value" id="thetaVal">[0.00, 0.00]</div>
+            </div>
+        </div>
+
+        <div class="log-box" id="logBox">جاهز للبدء... اضغط على "تشغيل المحاكاة" لبدء التحسين.</div>
+    </div>
+
+    <script>
+        let theta = [0.0, 0.0];
+        let currentRound = 0;
+        let timer = null;
+
+        function objective(t) {
+            // Objective function: sum((t - [2, -1])^2)
+            return Math.pow(t[0] - 2.0, 2) + Math.pow(t[1] - (-1.0), 2);
+        }
+
+        function quantize(val, nLevels) {
+            let clamped = Math.max(-10.0, Math.min(10.0, val));
+            let normalized = (clamped - (-10.0)) / (10.0 - (-10.0));
+            return Math.round(normalized * (nLevels - 1));
+        }
+
+        function dequantize(index, nLevels) {
+            let normalized = index / (nLevels - 1);
+            return -10.0 + normalized * (10.0 - (-10.0));
+        }
+
+        function runStep(nDevices, bits, lr, sigma) {
+            if (currentRound >= 50) {
+                clearInterval(timer);
+                log("انتهت الجولات بنجاح.");
+                return;
+            }
+
+            let nLevels = Math.pow(2, bits);
+            let localPerturbations = [];
+            let quantizedVals = [];
+
+            for (let i = 0; i < nDevices; i++) {
+                // Random perturbation using Box-Muller transform
+                let u1 = Math.random();
+                let u2 = Math.random();
+                let randStdNormal = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+                let perturbation = randStdNormal * sigma;
+
+                let u1_2 = Math.random();
+                let u2_2 = Math.random();
+                let randStdNormal2 = Math.sqrt(-2.0 * Math.log(u1_2)) * Math.cos(2.0 * Math.PI * u2_2);
+                let perturbation2 = randStdNormal2 * sigma;
+
+                let pertVec = [perturbation, perturbation2];
+                localPerturbations.push(pertVec);
+
+                let thetaPerturbed = [theta[0] + pertVec[0], theta[1] + pertVec[1]];
+                let fVal = objective(thetaPerturbed);
+                quantizedVals.push(quantize(fVal, nLevels));
+            }
+
+            let gradEstimate = [0.0, 0.0];
+            for (let i = 0; i < nDevices; i++) {
+                let fValDec = dequantize(quantizedVals[i], nLevels);
+                let pert = localPerturbations[i];
+                gradEstimate[0] += (fValDec / nDevices) * pert[0] / (sigma * sigma);
+                gradEstimate[1] += (fValDec / nDevices) * pert[1] / (sigma * sigma);
+            }
+
+            theta[0] -= lr * gradEstimate[0];
+            theta[1] -= lr * gradEstimate[1];
+
+            currentRound++;
+            let currentObj = objective(theta);
+
+            document.getElementById("roundVal").innerText = currentRound;
+            document.getElementById("objVal").innerText = currentObj.toFixed(4);
+            document.getElementById("thetaVal").innerText = `[${theta[0].toFixed(2)}, ${theta[1].toFixed(2)}]`;
+
+            if (currentRound % 10 === 0 || currentRound === 1) {
+                log(`الجولة ${currentRound}: قيمة الهدف = ${currentObj.toFixed(4)}, الحل = [${theta[0].toFixed(3)}, ${theta[1].toFixed(3)}]`);
+            }
+        }
+
+        function startSimulation() {
+            if (timer) clearInterval(timer);
+            let nDevices = parseInt(document.getElementById("nDevices").value) || 5;
+            let bits = parseInt(document.getElementById("quantBits").value) || 4;
+            let lr = parseFloat(document.getElementById("lr").value) || 0.1;
+            let sigma = parseFloat(document.getElementById("sigma").value) || 0.5;
+
+            theta = [0.0, 0.0];
+            currentRound = 0;
+            document.getElementById("logBox").innerText = "بدء جولات التحسين الموزع...\n";
+
+            timer = setInterval(() => {
+                runStep(nDevices, bits, lr, sigma);
+            }, 100);
+        }
+
+        function resetSimulation() {
+            if (timer) clearInterval(timer);
+            theta = [0.0, 0.0];
+            currentRound = 0;
+            document.getElementById("roundVal").innerText = "0";
+            document.getElementById("objVal").innerText = objective(theta).toFixed(4);
+            document.getElementById("thetaVal").innerText = "[0.00, 0.00]";
+            document.getElementById("logBox").innerText = "تمت إعادة التعيين.";
+        }
+
+        function log(msg) {
+            let box = document.getElementById("logBox");
+            box.innerText += msg + "\n";
+            box.scrollTop = box.scrollHeight;
+        }
+    </script>
+</body>
+</html>
